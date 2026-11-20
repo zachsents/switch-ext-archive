@@ -1,0 +1,29 @@
+{
+  "name": "spur-archive",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Moves files off a Mac onto an archive drive, verified with sha256, and minds the backups on it.",
+  "license": "MIT",
+  "repository": "github:zachsents/spur-archive",
+  "scripts": {
+    "check": "uvx ruff check --no-cache --select E9,F63,F7,F82 --exclude home . && python3 check.py"
+  },
+  "spur": {
+    "name": "archive",
+    "command": [
+      "python3",
+      "./main.py"
+    ],
+    "shim": "switchboard",
+    "needs": [
+      "macos"
+    ],
+    "widgets": [
+      "drive"
+    ],
+    "space": {
+      "id": "home",
+      "name": "Home"
+    }
+  }
+}
