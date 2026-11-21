@@ -1443,8 +1443,7 @@ app.widget("drive", "Archive", lambda: sbmcp.surface("drive", [
     {"id": "empty", "component": "Empty", "label": {"@path": "/empty"}},
     {"id": "line", "component": "Row", "label": {"@path": "label"}, "mark": {"@path": "mark"}, "detail": {"@path": "detail"},
      "alert": {"@path": "alert"}, "values": {"@path": "values"}, "progress": {"@path": "progress"}, "endsAt": {"@path": "endsAt"}},
-]), tool="status", refresh=["archive.job", "archive.ended", "archive.drive", "archive.backup", "archive.backup_stale"],
-    space="home", space_name="Home")
+]), tool="status", refresh=["archive.job", "archive.ended", "archive.drive", "archive.backup", "archive.backup_stale"])
 
 
 # Its senses: the drive, itself.

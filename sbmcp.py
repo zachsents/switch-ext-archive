@@ -247,13 +247,13 @@ class Server:
         self._waiting.setdefault(name, [])
         self._log.setdefault(name, [])
 
-    def widget(self, name, title, a2ui, tool=None, refresh=None, surfaces=("space",), space=None, space_name=None):
+    def widget(self, name, title, a2ui, tool=None, refresh=None, surfaces=("space",)):
         """Declares a widget (A2UI v1.0, Switch's convention): `a2ui()` returns its messages for one surface
         (`surface()` or `mcp_app()`); `tool` is the read-only tool whose structured result is its data model,
         and `refresh` the event types (with the spur's prefix) that redraw it."""
         uri = f"ui://{self.name}/{name}"
         descriptor = {"name": name, "title": title, "surfaces": list(surfaces), "resource": uri}
-        for key, value in (("space", space), ("spaceName", space_name), ("tool", tool), ("refresh", refresh)):
+        for key, value in (("tool", tool), ("refresh", refresh)):
             if value:
                 descriptor[key] = list(value) if key == "refresh" else value
         if tool and not (self._tools.get(tool) or ({}, None))[0].get("annotations", {}).get("readOnlyHint"):

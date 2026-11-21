@@ -20,10 +20,6 @@
     ],
     "widgets": [
       "drive"
-    ],
-    "space": {
-      "id": "home",
-      "name": "Home"
-    }
+    ]
   }
 }
