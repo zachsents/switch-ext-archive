@@ -15,8 +15,8 @@ if not compileall.compile_dir(HERE, quiet=1, rx=re.compile(r"node_modules|\.git|
     sys.exit("check: a file doesn't compile")
 
 pkg = json.load(open(os.path.join(HERE, "package.json")))
-spur = pkg["spur"]
-assert spur.get("name") and spur.get("command") and spur.get("shim") == "switchboard", "check: spur manifest"
+manifest = pkg["extension"]
+assert manifest.get("name") and manifest.get("command") and manifest.get("shim") == "switchboard", "check: extension manifest"
 
 import sbmcp  # noqa: E402
 
@@ -32,7 +32,7 @@ assert len(names) == len(set(names)) and names, "check: tools"
 for w in widgets:
     fed = w["_meta"][sbmcp.WIDGET].get("tool")
     assert not fed or tools[fed]["annotations"]["readOnlyHint"], f"check: widget {w['name']} needs a read-only tool"
-declared = set(spur.get("widgets") or [])
+declared = set(manifest.get("widgets") or [])
 assert declared == {w["_meta"][sbmcp.WIDGET]["name"] for w in widgets}, "check: manifest widgets"
 speaks = [n for n, t in tools.items() if t["annotations"].get("speaksForPerson")]
-print(f"{spur['name']}: {len(names)} tools ({len(speaks)} speak for the user), {len(events)} events, {len(widgets)} widgets")
+print(f"{manifest['name']}: {len(names)} tools ({len(speaks)} speak for the user), {len(events)} events, {len(widgets)} widgets")

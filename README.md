@@ -1,18 +1,18 @@
-# spur-archive
+# switch-ext-archive
 
 Moves files off a Mac onto an archive drive, verified file by file with sha256, brings them back the same way, says whether paths have a verified copy there before they're deleted, and minds the backups kept on that drive.
 
-A [Switch](https://switch.ax) spur: a Python MCP server (`sbmcp.py`) that Switch runs through [spur-kit](https://github.com/zachsents/spur-kit)'s shim. `drive.py` is the drive's side: it runs in-process on the Mac the drive is plugged into, and is sent over SSH from any other.
+A [Switch](https://switch.ax) extension: a Python MCP server (`sbmcp.py`) that Switch runs through [switch-ext-kit](https://github.com/zachsents/switch-ext-kit)'s shim. `drive.py` is the drive's side: it runs in-process on the Mac the drive is plugged into, and is sent over SSH from any other.
 
 Tools: `candidates`, `move` (removes originals once verified), `job`, `cancel`, `where`, `restore`, `verify`, `safe_to_delete`, `status`. Events: `job`, `ended`, `item`, `drive`, `surprise`, `backup`, `backup_stale`. Widget: `drive` (the drive, each backup's age, moves under way).
 
 ## Install
 
-Ask Switch's agent to install `github:zachsents/spur-archive`, or add it in the desktop's Spurs view (⌘K, Spurs). It needs `macos`.
+Ask Switch's agent to install `github:zachsents/switch-ext-archive`, or add it in the desktop's Extensions view (⌘K, Extensions). It needs `macos`.
 
 ## Setup
 
-Put a `config.json` in the spur's `home`:
+Put a `config.json` in the extension's `home`:
 
 ```json
 {

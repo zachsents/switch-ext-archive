@@ -175,7 +175,7 @@ class Server:
                  connections=None, reaches=None):
         """`connections` (in Switch): the accounts it needs, each {provider, scopes, multiple, kind?, label?}; it reaches
         them with accounts(), token() and adopt(), through whoever runs it. `reaches`: {calls, follows}, the other
-        spurs' tools it calls with call() and the brain's event types it follows with follow(), names or prefixes
+        extensions' tools it calls with call() and the brain's event types it follows with follow(), names or prefixes
         ending in *.
         `requests`: the appendages it asks with `sb request`, like "macos@local" or "macos@*";
         `notifies`: it runs `sb notify`; `reads` and `writes`: other streams its `sb` reads or writes.
@@ -250,7 +250,7 @@ class Server:
     def widget(self, name, title, a2ui, tool=None, refresh=None, surfaces=("space",)):
         """Declares a widget (A2UI v1.0, Switch's convention): `a2ui()` returns its messages for one surface
         (`surface()` or `mcp_app()`); `tool` is the read-only tool whose structured result is its data model,
-        and `refresh` the event types (with the spur's prefix) that redraw it."""
+        and `refresh` the event types (with the extension's prefix) that redraw it."""
         uri = f"ui://{self.name}/{name}"
         descriptor = {"name": name, "title": title, "surfaces": list(surfaces), "resource": uri}
         for key, value in (("tool", tool), ("refresh", refresh)):
@@ -456,7 +456,7 @@ class Server:
         return answer.get("result") or {}
 
     def call(self, name, arguments=None, timeout=120):
-        """Another spur's tool (one it declared in reaches.calls), as the agent would call it: its result."""
+        """Another extension's tool (one it declared in reaches.calls), as the agent would call it: its result."""
         return self.ask("switch/call", {"name": name, "arguments": arguments or {}}, timeout=timeout)
 
     def follow(self, types, fn):
@@ -944,7 +944,7 @@ def mcp_app(id, title, html, allowed_tools=None):
 
 
 def home():
-    """The folder only this spur opens, for what it keeps between runs: its host's SB_HOME, else ./home."""
+    """The folder only this extension opens, for what it keeps between runs: its host's SB_HOME, else ./home."""
     path = os.environ.get("SB_HOME") or os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "home")
     os.makedirs(path, exist_ok=True)
     return path
