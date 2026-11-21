@@ -1386,8 +1386,8 @@ def rows_of(out):
     d = out.get("drive")
     problem = out.get("drive_problem")
     if not VOLUME:
-        drive_row = {"label": "Archive drive", "mark": "stop", "detail": "Not set up", "alert": True, "values": []}
-    elif problem or not d or not d.get("mounted"):
+        return []
+    if problem or not d or not d.get("mounted"):
         drive_row = {"label": DRIVE_NAME, "mark": "stop", "detail": "Unreachable" if problem else "Unplugged", "alert": True, "values": []}
     else:
         drive_row = {"label": DRIVE_NAME, "mark": "", "detail": d.get("plugged_into") or "", "alert": False,
@@ -1432,11 +1432,15 @@ def status():
         recent = sorted(jobs.values(), key=lambda j: -j["created"])[:5]
     out["jobs"] = [{"job": j["id"], "op": j["op"], "state": j["state"], "summary": summary(j)} for j in recent]
     out["rows"] = rows_of(out)
+    # With no drive set up there's nothing to show: only the empty word, which keeps it off the board.
+    out["empty"] = "" if out["rows"] else "Not set up"
     return out
 
 
 app.widget("drive", "Archive", lambda: sbmcp.surface("drive", [
-    {"id": "root", "component": "Lines", "children": {"componentId": "line", "path": "/rows"}},
+    {"id": "root", "component": "Stack", "children": ["lines", "empty"]},
+    {"id": "lines", "component": "Lines", "children": {"componentId": "line", "path": "/rows"}},
+    {"id": "empty", "component": "Empty", "label": {"@path": "/empty"}},
     {"id": "line", "component": "Row", "label": {"@path": "label"}, "mark": {"@path": "mark"}, "detail": {"@path": "detail"},
      "alert": {"@path": "alert"}, "values": {"@path": "values"}, "progress": {"@path": "progress"}, "endsAt": {"@path": "endsAt"}},
 ]), tool="status", refresh=["archive.job", "archive.ended", "archive.drive", "archive.backup", "archive.backup_stale"],
