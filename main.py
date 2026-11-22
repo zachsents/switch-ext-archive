@@ -1437,10 +1437,13 @@ def status():
     return out
 
 
+BASIC_CATALOG = "https://a2ui.org/specification/v1_0/catalogs/basic/catalog.json"
+
+
 app.widget("drive", "Archive", lambda: sbmcp.surface("drive", [
-    {"id": "root", "component": "Stack", "children": ["lines", "empty"]},
-    {"id": "lines", "component": "Lines", "children": {"componentId": "line", "path": "/rows"}},
-    {"id": "empty", "component": "Empty", "label": {"@path": "/empty"}},
+    {"id": "root", "component": "Column", "catalogId": BASIC_CATALOG, "children": ["lines", "empty"]},
+    {"id": "lines", "component": "List", "catalogId": BASIC_CATALOG, "children": {"componentId": "line", "path": "/rows"}},
+    {"id": "empty", "component": "Text", "catalogId": BASIC_CATALOG, "text": {"@path": "/empty"}, "variant": "caption"},
     {"id": "line", "component": "Row", "label": {"@path": "label"}, "mark": {"@path": "mark"}, "detail": {"@path": "detail"},
      "alert": {"@path": "alert"}, "values": {"@path": "values"}, "progress": {"@path": "progress"}, "endsAt": {"@path": "endsAt"}},
 ]), tool="status", refresh=["archive.job", "archive.ended", "archive.drive", "archive.backup", "archive.backup_stale"])
