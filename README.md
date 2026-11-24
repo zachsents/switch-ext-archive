@@ -1,3 +1,5 @@
+**Moved to [zachsents/switch](https://github.com/zachsents/switch/tree/main/extensions/archive).** This repo is archived.
+
 # switch-ext-archive
 
 Moves files off a Mac onto an archive drive, verified file by file with sha256, brings them back the same way, says whether paths have a verified copy there before they're deleted, and minds the backups kept on that drive.
