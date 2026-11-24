@@ -34,42 +34,85 @@ HOME = sbmcp.home()
 """Where it keeps its jobs, state and config."""
 
 
+CONFIG_PATH = os.path.join(HOME, "config.json")
+
+
 def load_config():
     try:
-        with open(os.path.join(HOME, "config.json"), encoding="utf-8") as f:
+        with open(CONFIG_PATH, encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError:
         return {}
 
 
-CONFIG = load_config()
-USER_HOME = os.path.expanduser(CONFIG.get("user_home") or "~")
-"""The home folder whose files it moves; Archive/<mac>/ mirrors it."""
-VOLUME = (CONFIG.get("volume") or "").rstrip("/") or None
-"""Where the archive drive mounts, like /Volumes/Archive."""
-DRIVE_NAME = CONFIG.get("drive_name") or (os.path.basename(VOLUME) if VOLUME else "the archive drive")
-DRIVE = "archive-drive:" + (re.sub(r"[^a-z0-9]+", "-", DRIVE_NAME.lower()).strip("-") or "drive")
-MAC = CONFIG.get("mac") or socket.gethostname().split(".")[0].lower()
-"""This Mac's name, as Archive/<mac>/ knows it."""
-SSH = shlex.split(CONFIG.get("ssh") or "ssh")
 SSH_OPTS = ["-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "ServerAliveInterval=15",
             "-o", "ServerAliveCountMax=4", "-o", "StrictHostKeyChecking=accept-new"]
-RSYNC = CONFIG.get("rsync") or "rsync"
-REMOTE_PYTHON = CONFIG.get("remote_python") or "/usr/bin/python3"
-HOSTS = [h.strip() for h in CONFIG.get("hosts") or [] if h.strip()]
-"""Where to reach the drive's Mac (user@address) when it isn't plugged in here."""
-DRIVE_EVERY_S = float(CONFIG.get("check_minutes") or 5) * 60
+config_seen = None
+"""config.json's (mtime, size) when it was last read, so a change to it takes effect without a restart."""
+
+
+def apply_config(config):
+    """Sets everything config.json decides. Its keys are in the README."""
+    global CONFIG, USER_HOME, VOLUME, DRIVE_NAME, DRIVE, MAC, SSH, RSYNC, REMOTE_PYTHON, HOSTS
+    global DRIVE_EVERY_S, WAIT_FOR_DRIVE_S, MARGIN, BACKUPS, BACKUP_EVERY_S
+    CONFIG = config
+    USER_HOME = os.path.expanduser(config.get("user_home") or "~")
+    """The home folder whose files it moves; Archive/<mac>/ mirrors it."""
+    VOLUME = (config.get("volume") or "").rstrip("/") or None
+    """Where the archive drive mounts, like /Volumes/Archive."""
+    DRIVE_NAME = config.get("drive_name") or (os.path.basename(VOLUME) if VOLUME else "the archive drive")
+    DRIVE = "archive-drive:" + (re.sub(r"[^a-z0-9]+", "-", DRIVE_NAME.lower()).strip("-") or "drive")
+    MAC = config.get("mac") or socket.gethostname().split(".")[0].lower()
+    """This Mac's name, as Archive/<mac>/ knows it."""
+    SSH = shlex.split(config.get("ssh") or "ssh")
+    RSYNC = config.get("rsync") or "rsync"
+    REMOTE_PYTHON = config.get("remote_python") or "/usr/bin/python3"
+    HOSTS = [h.strip() for h in config.get("hosts") or [] if h.strip()]
+    """Where to reach the drive's Mac (user@address) when it isn't plugged in here."""
+    DRIVE_EVERY_S = float(config.get("check_minutes") or 5) * 60
+    WAIT_FOR_DRIVE_S = float(config.get("wait_minutes") or 30) * 60
+    """How long a job waits for the drive's Mac to come back (asleep, off the network) before an item gives up,
+    its originals kept."""
+    MARGIN = float(config.get("margin_gb") or 1) * 1e9
+    """Room a move leaves on the drive, at the least."""
+    BACKUPS = [b for b in config.get("backups") or [] if b.get("name") and b.get("path")]
+    """The backups it minds on the drive: {name, path (on the drive, or absolute), pattern, max_age_hours}."""
+    BACKUP_EVERY_S = float(config.get("backup_check_minutes") or 15) * 60
+
+
+def refresh_config():
+    """Reads config.json again when it has changed since it was last read (or appeared, or went away). A config
+    that doesn't parse leaves the last good one in place, and says so."""
+    global config_seen, CONFIG_LOADED
+    try:
+        st = os.stat(CONFIG_PATH)
+        seen = (st.st_mtime_ns, st.st_size)
+    except FileNotFoundError:
+        seen = None
+    if seen == config_seen and CONFIG_LOADED:
+        return
+    try:
+        config = load_config()
+    except (OSError, ValueError) as e:
+        if CONFIG_LOADED:
+            raise RuntimeError(f"{CONFIG_PATH} doesn't read ({e}), so the last config it read stands") from e
+        config = {}
+    apply_config(config)
+    config_seen = seen
+    CONFIG_LOADED = True
+
+
+def need_volume():
+    """Fails clearly when no archive drive is set, before anything reaches for it."""
+    if not VOLUME:
+        raise Unreachable(f"no archive drive configured: put volume in {CONFIG_PATH} (like {{\"volume\": \"/Volumes/Archive\"}})")
+
+
+CONFIG_LOADED = False
+refresh_config()
 SPOT_CHECK_EVERY_S = 24 * 3600
-WAIT_FOR_DRIVE_S = float(CONFIG.get("wait_minutes") or 30) * 60
-"""How long a job waits for the drive's Mac to come back (asleep, off the network) before an item gives up,
-its originals kept."""
-MARGIN = float(CONFIG.get("margin_gb") or 1) * 1e9
-"""Room a move leaves on the drive, at the least."""
 RECENT_S = 10 * 60
 """Something written to in the last ten minutes is likely in use, so it isn't moved unless forced."""
-BACKUPS = [b for b in CONFIG.get("backups") or [] if b.get("name") and b.get("path")]
-"""The backups it minds on the drive: {name, path (on the drive, or absolute), pattern, max_age_hours}."""
-BACKUP_EVERY_S = float(CONFIG.get("backup_check_minutes") or 15) * 60
 HEARTBEAT_S = 5 * 60
 """How often it says how it is: its manifest's heartbeat."""
 
@@ -152,11 +195,18 @@ def tilde(path):
     return "~/" + os.path.relpath(path, USER_HOME) if path.startswith(USER_HOME + "/") else path
 
 
-def failing(fn):
-    """A tool that counts its calls, and keeps its last failure for status."""
+def failing(fn=None, *, needs_drive=True):
+    """A tool that counts its calls, and keeps its last failure for status. Each call reads config.json again if it
+    changed; one that reaches the drive (`needs_drive`) fails clearly when none is set."""
+    if fn is None:
+        return lambda f: failing(f, needs_drive=needs_drive)
+
     def wrapped(*a, **k):
         state["calls"] += 1
         try:
+            refresh_config()
+            if needs_drive:
+                need_volume()
             return fn(*a, **k)
         except Exception as e:
             state["failed"] += 1
@@ -1411,7 +1461,7 @@ def rows_of(out):
 
 
 @app.tool(read_only=True)
-@failing
+@failing(needs_drive=False)
 def status():
     """How archiving stands from this Mac: where the drive is plugged in and how this Mac reaches it (each address's
     speed), its space and what's archived from each Mac, this Mac's free space, each backup it minds on the drive
@@ -1537,6 +1587,7 @@ def beat():
     last_backups = 0.0
     while True:
         try:
+            refresh_config()
             observe_drive()
             spot_check()
         except Exception as e:
@@ -1557,7 +1608,13 @@ def heartbeat():
     """Says how it is, in vitals/archive. `failing` is what's broken now: the drive plugged in here but its archive
     unreadable."""
     failing = None
-    if mounted_here():
+    try:
+        refresh_config()
+    except RuntimeError as e:
+        failing = str(e)
+    if not VOLUME:
+        failing = failing or f"No archive drive configured: put volume in {CONFIG_PATH}"
+    elif mounted_here():
         root = drivelib.archive_root(VOLUME)
         try:
             os.listdir(root if os.path.isdir(root) else VOLUME)

@@ -29,4 +29,6 @@ Put a `config.json` in the extension's `home`:
 - `backups`: each a folder on the drive (or absolute) and a glob its files match (`**` for any depth), with how old the newest may be before `backup_stale` is emitted.
 - Optional: `mac` (this Mac's name under `Archive/`, default its host name), `user_home`, `ssh`, `rsync`, `remote_python`, `margin_gb`, `wait_minutes`, `check_minutes`, `backup_check_minutes`.
 
+It reads `config.json` again whenever it changes, so an edit takes effect without a restart. Until `volume` is set, every tool that reaches the drive fails with "no archive drive configured".
+
 On the drive: `Archive/<mac>/<path under home>` holds what was moved, `Archive/manifest.jsonl` a line per file (original, archive path, bytes, sha256), `Archive/restores.jsonl` a line per item brought back. Nothing on the drive is ever deleted or written over.
