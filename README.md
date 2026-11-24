@@ -4,7 +4,7 @@ Moves files off a Mac onto an archive drive, verified file by file with sha256, 
 
 A [Switch](https://switch.ax) extension: a Python MCP server (`sbmcp.py`) that Switch runs through [switch-ext-kit](https://github.com/zachsents/switch-ext-kit)'s shim. `drive.py` is the drive's side: it runs in-process on the Mac the drive is plugged into, and is sent over SSH from any other.
 
-Tools: `candidates`, `move` (removes originals once verified), `job`, `cancel`, `where`, `restore`, `verify`, `safe_to_delete`, `status`. Events: `job`, `ended`, `item`, `drive`, `surprise`, `backup`, `backup_stale`. Widget: `drive` (the drive, each backup's age, moves under way).
+Tools: `candidates`, `move` (removes originals once verified), `job`, `cancel`, `where`, `restore`, `verify`, `safe_to_delete`, `status`. Events: `job`, `ended`, `item`, `drive`, `surprise`, `backup`, `backup_stale`, `heartbeat`. Widget: `drive` (the drive, each backup's age, moves under way).
 
 ## Install
 

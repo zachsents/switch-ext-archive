@@ -70,6 +70,8 @@ RECENT_S = 10 * 60
 BACKUPS = [b for b in CONFIG.get("backups") or [] if b.get("name") and b.get("path")]
 """The backups it minds on the drive: {name, path (on the drive, or absolute), pattern, max_age_hours}."""
 BACKUP_EVERY_S = float(CONFIG.get("backup_check_minutes") or 15) * 60
+HEARTBEAT_S = 5 * 60
+"""How often it says how it is: its manifest's heartbeat."""
 
 STANDARD = {"Desktop", "Documents", "Downloads", "Movies", "Music", "Pictures", "Public", "Applications", "Library"}
 VIDEO = {".mov", ".mp4", ".m4v", ".mkv", ".webm", ".avi", ".mts", ".m2ts", ".braw", ".mxf", ".hevc", ".3gp"}
@@ -112,6 +114,7 @@ app.event("surprise", "Archived files that no longer match what was moved", stre
 app.event("backup", "A backup that landed on the drive: its newest file, size and age", stream="archive/backups",
           kind="observation", retention="signal")
 app.event("backup_stale", "A backup on the drive is older than expected, or missing", stream="surprises", kind="surprise")
+app.event("heartbeat", "How it is itself", stream=f"vitals/{NAME}", kind="observation", retention="signal")
 
 state = {"started_at": int(time.time() * 1000), "calls": 0, "failed": 0, "last_error": None}
 lock = threading.RLock()
@@ -1547,6 +1550,33 @@ def beat():
             except Exception as e:
                 state["last_error"] = f"backups: {type(e).__name__}: {e}"
         time.sleep(min(DRIVE_EVERY_S, BACKUP_EVERY_S))
+
+
+
+def heartbeat():
+    """Says how it is, in vitals/archive. `failing` is what's broken now: the drive plugged in here but its archive
+    unreadable."""
+    failing = None
+    if mounted_here():
+        root = drivelib.archive_root(VOLUME)
+        try:
+            os.listdir(root if os.path.isdir(root) else VOLUME)
+        except OSError as e:
+            failing = f"Can't read {root}: {e.strerror or e}"
+    with lock:
+        moving = len(running)
+    summary = failing or "Ready" + (f"; {moving} job{'s' if moving != 1 else ''} running" if moving else "")
+    app.emit("heartbeat", {"entity": f"sense:{NAME}", "summary": summary,
+                           "facts": {"drive_here": mounted_here(), "running": moving, "calls": state["calls"],
+                                     "failed": state["failed"], "last_error": state["last_error"], "failing": failing}},
+             about=[f"sense:{NAME}"])
+
+
+@app.background
+def beats():
+    while True:
+        heartbeat()
+        time.sleep(HEARTBEAT_S)
 
 
 if __name__ == "__main__":
